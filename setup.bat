@@ -72,8 +72,13 @@ echo   -^> Downloading Base Model...
 huggingface-cli download Qwen/Qwen-Image-Edit-2511 --local-dir models\Qwen-Image-Edit-2511
 if %errorlevel% neq 0 (
     echo ERROR: Failed to download base model.
-    pause
-    exit /b 1
+    echo Trying alternative download method...
+    python -c "from huggingface_hub import snapshot_download; snapshot_download('Qwen/Qwen-Image-Edit-2511', local_dir='models/Qwen-Image-Edit-2511')"
+    if %errorlevel% neq 0 (
+        echo ERROR: Both download methods failed.
+        pause
+        exit /b 1
+    )
 )
 
 echo   -^> Downloading NSFW Weights (v23)...
@@ -99,8 +104,8 @@ REM STEP 8: Set environment variables
 REM -----------------------------------------------------------
 echo.
 echo [8/8] Setting environment variables...
-set BASE_MODEL_PATH=%cd%\models\Qwen-Image-Edit-2511
-set NSFW_WEIGHTS_PATH=%cd%\models\rapid-aio\v23\Qwen-Rapid-AIO-NSFW-v23.safetensors
+set BASE_MODEL_PATH=models\Qwen-Image-Edit-2511
+set NSFW_WEIGHTS_PATH=models\rapid-aio\v23\Qwen-Rapid-AIO-NSFW-v23.safetensors
 
 REM Persist environment variables (requires admin rights, so we'll skip for now)
 REM setx BASE_MODEL_PATH "%cd%\models\Qwen-Image-Edit-2511"
