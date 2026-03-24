@@ -9,7 +9,7 @@ try:
     from pyftpdlib.servers import FTPServer
 except ImportError:
     print("pyftpdlib not found. Installing...")
-    # Using --break-system-packages to bypass the externally-managed-environment error
+    subprocess.check_call(["apt", "install", "-y", "python3-pip"])
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pyftpdlib", "--break-system-packages"])
     from pyftpdlib.authorizers import DummyAuthorizer
     from pyftpdlib.handlers import FTPHandler
