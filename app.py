@@ -28,227 +28,14 @@ from io import BytesIO
 import json
 
 # ---------------------------------------------------------------------------
-# LOCAL MODEL PATHS — edit these or set the env vars on your VPS.
-#
-# Pre-download with huggingface-cli ONCE, then everything runs offline:
-#
-#   huggingface-cli download Qwen/Qwen-Image-Edit-2511 \
-#       --local-dir /models/Qwen-Image-Edit-2511
-#
-#   huggingface-cli download Phr00t/Qwen-Image-Edit-Rapid-AIO \
-#       --include "v23/Qwen-Rapid-AIO-NSFW-v23.safetensors" \
-#       --local-dir /models/rapid-aio
-#
-#   huggingface-cli download Qwen/Qwen2.5-VL-7B-Instruct \
-#       --local-dir /models/Qwen2.5-VL-7B-Instruct
-#   (switch to 72B on the PRO 6000 Blackwell for higher-quality rewrites)
+# LOCAL MODEL PATHS — relative to this script for portability
+# Models will auto-download to ./models/ folder on first run
 # ---------------------------------------------------------------------------
-BASE_MODEL_LOCAL_PATH = os.environ.get(
-    "BASE_MODEL_PATH", "/models/Qwen-Image-Edit-2511"
-)
-NSFW_WEIGHTS_LOCAL_PATH = os.environ.get(
-    "NSFW_WEIGHTS_PATH", "/models/rapid-aio/v23/Qwen-Rapid-AIO-NSFW-v23.safetensors"
-)
-REWRITER_MODEL_LOCAL_PATH = os.environ.get(
-    "REWRITER_MODEL_PATH", "/models/Qwen2.5-VL-7B-Instruct"
-)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(SCRIPT_DIR, "models")
 
-SYSTEM_PROMPT = '''
-# Edit Instruction Rewriter
-You are a professional edit instruction rewriter. Your task is to generate a precise, concise, and visually achievable professional-level edit instruction based on the user-provided instruction and the image to be edited.  
-
-Please strictly follow the rewriting rules below:
-
-## 1. General Principles
-- Keep the rewritten prompt **concise and comprehensive**. Avoid overly long sentences and unnecessary descriptive language.  
-- If the instruction is contradictory, vague, or unachievable, prioritize reasonable inference and correction, and supplement details when necessary.  
-- Keep the main part of the original instruction unchanged, only enhancing its clarity, rationality, and visual feasibility.  
-- All added objects or modifications must align with the logic and style of the scene in the input images.  
-- If multiple sub-images are to be generated, describe the content of each sub-image individually.  
-
-## 2. Task-Type Handling Rules
-
-### 1. Add, Delete, Replace Tasks
-- If the instruction is clear (already includes task type, target entity, position, quantity, attributes), preserve the original intent and only refine the grammar.  
-- If the description is vague, supplement with minimal but sufficient details (category, color, size, orientation, position, etc.). For example:  
-    > Original: "Add an animal"  
-    > Rewritten: "Add a light-gray cat in the bottom-right corner, sitting and facing the camera"  
-- Remove meaningless instructions: e.g., "Add 0 objects" should be ignored or flagged as invalid.  
-- For replacement tasks, specify "Replace Y with X" and briefly describe the key visual features of X.  
-
-### 2. Text Editing Tasks
-- All text content must be enclosed in English double quotes `" "`. Keep the original language of the text, and keep the capitalization.  
-- Both adding new text and replacing existing text are text replacement tasks, For example:  
-    - Replace "xx" to "yy"  
-    - Replace the mask / bounding box to "yy"  
-    - Replace the visual object to "yy"  
-- Specify text position, color, and layout only if user has required.  
-- If font is specified, keep the original language of the font.  
-
-### 3. Human Editing Tasks
-- Make the smallest changes to the given user's prompt.  
-- If changes to background, action, expression, camera shot, or ambient lighting are required, please list each modification individually.
-- **Edits to makeup or facial features / expression must be subtle, not exaggerated, and must preserve the subject's identity consistency.**
-    > Original: "Add eyebrows to the face"  
-    > Rewritten: "Slightly thicken the person's eyebrows with little change, look natural."
-
-### 4. Style Conversion or Enhancement Tasks
-- If a style is specified, describe it concisely using key visual features. For example:  
-    > Original: "Disco style"  
-    > Rewritten: "1970s disco style: flashing lights, disco ball, mirrored walls, vibrant colors"  
-- For style reference, analyze the original image and extract key characteristics (color, composition, texture, lighting, artistic style, etc.), integrating them into the instruction.  
-- **Colorization tasks (including old photo restoration) must use the fixed template:**  
-  "Restore and colorize the old photo."  
-- Clearly specify the object to be modified. For example:  
-    > Original: Modify the subject in Picture 1 to match the style of Picture 2.  
-    > Rewritten: Change the girl in Picture 1 to the ink-wash style of Picture 2 — rendered in black-and-white watercolor with soft color transitions.
-
-### 5. Material Replacement
-- Clearly specify the object and the material. For example: "Change the material of the apple to papercut style."
-- For text material replacement, use the fixed template:
-    "Change the material of text "xxxx" to laser style"
-
-### 6. Logo/Pattern Editing
-- Material replacement should preserve the original shape and structure as much as possible. For example:
-   > Original: "Convert to sapphire material"  
-   > Rewritten: "Convert the main subject in the image to sapphire material, preserving similar shape and structure"
-- When migrating logos/patterns to new scenes, ensure shape and structure consistency. For example:
-   > Original: "Migrate the logo in the image to a new scene"  
-   > Rewritten: "Migrate the logo in the image to a new scene, preserving similar shape and structure"
-
-### 7. Multi-Image Tasks
-- Rewritten prompts must clearly point out which image's element is being modified. For example:  
-    > Original: "Replace the subject of picture 1 with the subject of picture 2"  
-    > Rewritten: "Replace the girl of picture 1 with the boy of picture 2, keeping picture 2's background unchanged"  
-- For stylization tasks, describe the reference image's style in the rewritten prompt, while preserving the visual content of the source image.  
-
-## 3. Rationale and Logic Check
-- Resolve contradictory instructions: e.g., "Remove all trees but keep all trees" requires logical correction.
-- Supplement missing critical information: e.g., if position is unspecified, choose a reasonable area based on composition (near subject, blank space, center/edge, etc.).
-
-# Output Format Example
-```json
-{
-   "Rewritten": "..."
-}
-'''
-
-# ---------------------------------------------------------------------------
-# CHANGE 1 of 4: LOCAL PROMPT REWRITER
-# Original function used InferenceClient(provider="nebius") -> HuggingFace cloud
-# -> Qwen2.5-VL-72B-Instruct running on Nebius servers.
-# Replacement: identical function name/signature, runs the same model family
-# locally on the VPS GPU. Zero bytes leave this machine.
-# ---------------------------------------------------------------------------
-
-# Lazy-loaded on first rewrite call so the main diffusion pipeline
-# can claim GPU memory at startup without competition.
-_rewriter_model = None
-_rewriter_processor = None
-
-
-def _load_rewriter():
-    """Load the local Qwen2.5-VL rewriter model once, on first use."""
-    global _rewriter_model, _rewriter_processor
-    if _rewriter_model is not None:
-        return
-    print(f"Loading local rewriter model from: {REWRITER_MODEL_LOCAL_PATH}")
-    try:
-        from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
-        _rewriter_processor = AutoProcessor.from_pretrained(
-            REWRITER_MODEL_LOCAL_PATH,
-            local_files_only=True,
-        )
-        _rewriter_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            REWRITER_MODEL_LOCAL_PATH,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",          # spreads across available GPUs automatically
-            local_files_only=True,
-        )
-        print("Local rewriter model loaded successfully.")
-    except Exception as e:
-        print(f"WARNING: Could not load local rewriter model: {e}")
-        print("Prompt rewriting will fall back to the original prompt.")
-        _rewriter_model = None
-        _rewriter_processor = None
-
-
-def polish_prompt_hf(original_prompt, img_list):
-    """
-    Rewrites the prompt using a LOCAL Qwen2.5-VL model.
-    Drop-in replacement for the original InferenceClient-based version.
-    Identical call signature, identical return value. No data leaves this machine.
-    """
-    _load_rewriter()
-    if _rewriter_model is None:
-        print("Warning: Local rewriter unavailable. Falling back to original prompt.")
-        return original_prompt
-
-    prompt = f"{SYSTEM_PROMPT}\n\nUser Input: {original_prompt}\n\nRewritten Prompt:"
-    system_prompt = "you are a helpful assistant, you should provide useful answers to users."
-
-    try:
-        # Convert list of images to PIL for the processor
-        pil_imgs = []
-        if img_list is not None:
-            if not isinstance(img_list, list):
-                img_list = [img_list]
-            for img in img_list:
-                if hasattr(img, 'save'):           # already a PIL Image
-                    pil_imgs.append(img.convert("RGB"))
-                elif isinstance(img, str):
-                    pil_imgs.append(Image.open(img).convert("RGB"))
-                else:
-                    print(f"Warning: Unexpected image type: {type(img)}, skipping...")
-
-        # Build the messages in Qwen2.5-VL chat format
-        content = [{"type": "text", "text": prompt}]
-        for pil_img in pil_imgs:
-            content.append({"type": "image", "image": pil_img})
-
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": content},
-        ]
-
-        # Apply chat template and tokenise
-        text = _rewriter_processor.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-        inputs = _rewriter_processor(
-            text=[text],
-            images=pil_imgs if pil_imgs else None,
-            return_tensors="pt",
-        ).to(_rewriter_model.device)
-
-        # Generate — cap at 512 tokens, matching quality of the original cloud call
-        with torch.no_grad():
-            output_ids = _rewriter_model.generate(
-                **inputs,
-                max_new_tokens=512,
-                do_sample=False,
-            )
-        # Decode only the newly generated tokens (strip the prompt)
-        generated = output_ids[0][inputs["input_ids"].shape[1]:]
-        result = _rewriter_processor.decode(generated, skip_special_tokens=True)
-
-        # Parse the response — identical JSON extraction logic as original
-        if '"Rewritten"' in result:
-            try:
-                result = result.replace('```json', '').replace('```', '')
-                result_json = json.loads(result)
-                polished_prompt = result_json.get('Rewritten', result)
-            except Exception:
-                polished_prompt = result
-        else:
-            polished_prompt = result
-
-        polished_prompt = polished_prompt.strip().replace("\n", " ")
-        return polished_prompt
-
-    except Exception as e:
-        print(f"Error during local rewriter inference: {e}")
-        return original_prompt
+BASE_MODEL_LOCAL_PATH = os.path.join(MODELS_DIR, "Qwen-Image-Edit-2511")
+NSFW_WEIGHTS_LOCAL_PATH = os.path.join(MODELS_DIR, "rapid-aio", "v23", "Qwen-Rapid-AIO-NSFW-v23.safetensors")
 
 
 def encode_image(pil_image):
@@ -287,19 +74,29 @@ from safetensors.torch import load_file
 import torch.nn.functional as F
 
 
-#################################
-
 # ---------------------------------------------------------------------------
-# CHANGE 2 of 4: BASE PIPELINE — local directory instead of HuggingFace hub
-# Original: from_pretrained("Qwen/Qwen-Image-Edit-2511", ...)  <- hits HF servers
-# Local:    from_pretrained(BASE_MODEL_LOCAL_PATH, local_files_only=True)
+# CHANGE 2 of 4: BASE PIPELINE — auto-download to local models folder
 # ---------------------------------------------------------------------------
 print("loading base pipeline architecture...")
-pipe = QwenImageEditPlusPipeline.from_pretrained(
-    BASE_MODEL_LOCAL_PATH,
-    torch_dtype=torch.bfloat16,
-    local_files_only=True,
-).to("cuda")
+
+# Auto-download if not present
+if not os.path.exists(BASE_MODEL_LOCAL_PATH):
+    print(f"Base model not found. Downloading to {BASE_MODEL_LOCAL_PATH}...")
+    os.makedirs(MODELS_DIR, exist_ok=True)
+    pipe = QwenImageEditPlusPipeline.from_pretrained(
+        "Qwen/Qwen-Image-Edit-2511",
+        torch_dtype=torch.bfloat16,
+        cache_dir=MODELS_DIR,
+    ).to("cuda")
+    # Save locally for future use
+    pipe.save_pretrained(BASE_MODEL_LOCAL_PATH)
+else:
+    print(f"Loading from local path: {BASE_MODEL_LOCAL_PATH}")
+    pipe = QwenImageEditPlusPipeline.from_pretrained(
+        BASE_MODEL_LOCAL_PATH,
+        torch_dtype=torch.bfloat16,
+        local_files_only=True,
+    ).to("cuda")
 
 # force euler ancestral scheduler
 #pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
@@ -307,12 +104,25 @@ pipe = QwenImageEditPlusPipeline.from_pretrained(
 # 2. LOAD RAW WEIGHTS FROM LOCAL FILE
 # ------------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-# CHANGE 3 of 4: NSFW WEIGHTS — local file instead of hf_hub_download()
-# Original: hf_hub_download(repo_id="Phr00t/Qwen-Image-Edit-Rapid-AIO", ...) <- HF servers
-# Local:    direct path to the pre-downloaded .safetensors file
+# CHANGE 3 of 4: NSFW WEIGHTS — auto-download to local models folder
 # ---------------------------------------------------------------------------
 print("accessing v23 checkpoint...")
-v23_path = NSFW_WEIGHTS_LOCAL_PATH
+
+# Auto-download if not present
+if not os.path.exists(NSFW_WEIGHTS_LOCAL_PATH):
+    print(f"NSFW weights not found. Downloading to {NSFW_WEIGHTS_LOCAL_PATH}...")
+    os.makedirs(os.path.dirname(NSFW_WEIGHTS_LOCAL_PATH), exist_ok=True)
+    from huggingface_hub import hf_hub_download
+    v23_path = hf_hub_download(
+        repo_id="Phr00t/Qwen-Image-Edit-Rapid-AIO",
+        filename="v23/Qwen-Rapid-AIO-NSFW-v23.safetensors",
+        cache_dir=MODELS_DIR,
+        local_dir=os.path.join(MODELS_DIR, "rapid-aio"),
+        local_dir_use_symlinks=False,
+    )
+else:
+    print(f"Loading from local path: {NSFW_WEIGHTS_LOCAL_PATH}")
+    v23_path = NSFW_WEIGHTS_LOCAL_PATH
 
 print(f"loading 28GB state dict into cpu memory...")
 state_dict = load_file(v23_path)
@@ -450,7 +260,6 @@ def infer(
     num_inference_steps=4,
     height=None,
     width=None,
-    rewrite_prompt=True,
     num_images_per_prompt=1,
     progress=gr.Progress(track_tqdm=True),
 ):
@@ -459,14 +268,13 @@ def infer(
 
     Parameters:
         images (list): Input images from the Gradio gallery (PIL or path-based).
-        prompt (str): Editing instruction (may be rewritten by LLM if enabled).
+        prompt (str): Editing instruction.
         seed (int): Random seed for reproducibility.
         randomize_seed (bool): If True, overrides seed with a random value.
         true_guidance_scale (float): CFG scale used by Qwen-Image.
         num_inference_steps (int): Number of diffusion steps.
         height (int | None): Optional output height override.
         width (int | None): Optional output width override.
-        rewrite_prompt (bool): Whether to rewrite the prompt using Qwen-2.5-VL.
         num_images_per_prompt (int): Number of images to generate.
         progress: Gradio progress callback.
 
@@ -497,12 +305,7 @@ def infer(
     if height==256 and width==256:
         height, width = None, None
     
-    # Rewrite prompt if enabled
-    if rewrite_prompt and len(pil_images) > 0:
-        prompt = polish_prompt_hf(prompt, pil_images)
-        print(f"Rewritten Prompt: {prompt}")
-    
-    print(f"Final Prompt: '{prompt}'")
+    print(f"Prompt: '{prompt}'")
     print(f"Negative Prompt: '{negative_prompt}'")
     print(f"Seed: {seed}, Steps: {num_inference_steps}, Guidance: {true_guidance_scale}, Size: {width}x{height}")
     
@@ -552,6 +355,10 @@ body, .gradio-container {
     flex: 0 0 auto !important;
     min-width: 80px !important;
 }
+#preset-row input[type="text"] {
+    pointer-events: none !important;
+    user-select: none !important;
+}
 """
 
 with gr.Blocks(css=css) as demo:
@@ -581,7 +388,8 @@ with gr.Blocks(css=css) as demo:
                 ],
                 value=None,
                 interactive=True,
-                show_label=False
+                show_label=False,
+                allow_custom_value=False
             )
             run_button_top = gr.Button("Edit!", variant="primary", size="sm")
         
@@ -671,8 +479,6 @@ with gr.Blocks(css=css) as demo:
                     step=8,
                     value=None,
                 )
-                
-                rewrite_prompt = gr.Checkbox(label="Rewrite prompt", value=False)
 
         # gr.Examples(examples=examples, inputs=[prompt], outputs=[result, seed], fn=infer, cache_examples=False)
 
@@ -724,7 +530,6 @@ with gr.Blocks(css=css) as demo:
             num_inference_steps,
             height,
             width,
-            rewrite_prompt,
             num_images_per_prompt,
         ],
         outputs=[result, seed, use_output_btn],
