@@ -393,6 +393,42 @@ with gr.Blocks(css=css) as demo:
             )
             run_button_top = gr.Button("Edit!", variant="primary", size="sm")
         
+        with gr.Row(elem_id="preset-row"):
+            preset_dropdown2 = gr.Dropdown(
+                label="More Prompts",
+                choices=[
+                    "Balcony Risky Sex",
+                    "Bathroom Sink Sex",
+                    "Bed Arching Back Orgasm Pose",
+                    "Bed Doggy Style Front Turned",
+                    "Bent Over Table Anal-Vaginal Tease",
+                    "Car Backseat Ride",
+                    "Chair Ride Facing Camera",
+                    "Close Up Face With Vaginal Spread And Penis Tease",
+                    "Couch Lap Dance Penetration",
+                    "Intense Missionary Leg Lift",
+                    "Kitchen Counter Penetration",
+                    "Kneeling Frontal Invitation With Fingers",
+                    "Lotus Position Deep Intimate",
+                    "Mirror Reflection Tease",
+                    "Overhead Squat Ride Ecstasy",
+                    "Prone Bone Close Up",
+                    "Reverse Cowgirl Deep Squat",
+                    "Shower Wet Sex",
+                    "Sideways Spooning Vaginal Sex",
+                    "Standing Bent Over Window Sex",
+                    "Standing Carry Position Tease",
+                    "Wall Leaning Deep Penetration Tease",
+                    "Wall Pressed Standing Sex",
+                    "Yoga Mat Deep Stretch Sex"
+                ],
+                value=None,
+                interactive=True,
+                show_label=False,
+                allow_custom_value=False
+            )
+            run_button_top2 = gr.Button("Edit!", variant="primary", size="sm")
+        
         with gr.Row():
             with gr.Column():
                 input_images = gr.Gallery(label="Input Images", 
@@ -504,10 +540,44 @@ with gr.Blocks(css=css) as demo:
         "Rear View Couch Sex": "she is squatting all the way down at the bottom center of the photo with her vagina fully penetrated by a short little penis also coming from all the way at the bottom center of the photo. \nback view, fully naked on a couch with a slight dark bedroom background. the man's legs are seen completely closed together but out straight between her legs. the entire penis is hidden inside of her vagina. she wears a sexy cocktail dress that doesn't cover her vagina. her breasts are also outside of the dress with hardened nipple showing. Her legs are much thinner and petite. both sides of her fat  vulva are noticeably spread apart from the penis and her head is turned almost completely around naturally as far as she can to look directly into my eyes, her mouth is open with lips in a closed small surprised o shape. her butt is pointing up at the camera so you can see the intimate details of her full penetrated vagina. Exact same identical face with all the exact same identical features. she is also reaching behind her back and using only  her little hand to grab and spreading more open her right butt cheek so the penis is seen even deeper inside of her. only the penis of the man is visible. everything else is the exact same!"
     }
     
+    # More prompts dictionary
+    more_prompts_dict = {
+        "Balcony Risky Sex": "On a balcony at night, leaning over the railing, small penis inside her vagina from behind, dress bunched at waist, wind blowing, one leg lifted, vagina fully visible and dripping. Same exact identical face with all the same exact identical features turned back with risky excited smile and open mouth. Everything else the exact same!",
+        "Bathroom Sink Sex": "Sitting on the bathroom sink facing the camera, legs spread wide on the edges, small penis fully penetrating her vagina, water running in background, both hands pulling her breasts up and together while vagina is stretched visibly. Same exact identical face with all the same exact identical features moaning with pure pleasure looking straight at viewer. Everything else stays the exact same!",
+        "Bed Arching Back Orgasm Pose": "No clothes, lying on her girly bed with back arched high, legs spread maximally and pulled back, small penis fully embedded in her vagina from below with the man's legs under her, her hands pinching her hard nipples. Same exact identical face with all the same exact identical features showing maximum ecstasy with eyes rolled back and tongue hanging out. Vagina is fully visible and glistening. Everything else stays the same!",
+        "Bed Doggy Style Front Turned": "On all fours on the bed facing away but head fully turned back to camera naturally, small penis penetrating her vagina deeply from behind, one hand reaching under to spread her vulva lips around the shaft showing insertion. Same exact identical face with all the same exact identical features with eyes locked on viewer in dreamy loving pleasure. Her butt cheeks are spread naturally. Everything else the exact same!",
+        "Bent Over Table Anal-Vaginal Tease": "Bent over a table in the same room, clothing bunched at waist, small penis deep in her ass but legs spread so her vagina is prominently visible and dripping below the penetration, she reaches back with both hands to spread her ass cheeks and vulva simultaneously. Same exact identical face with all the same exact identical features turned around to the camera with wide O mouth in overwhelming pleasure. Everything else the exact same!",
+        "Car Backseat Ride": "In the backseat of a car, straddling facing camera, small penis buried inside her vagina, windows slightly fogged, dress pulled down and up, hands on the headrest behind her pushing her breasts forward. Same exact identical face with all the same exact identical features in maximum arousal looking at viewer. Everything else the exact same!",
+        "Chair Ride Facing Camera": "Sitting on a chair facing the camera, small penis fully inside her vagina, legs draped over the chair arms spreading her extremely wide, both hands pulling her vulva lips apart showing the penetration and her insides. Breasts fully exposed with hard nipples. Same exact identical face with all the same exact identical features staring directly at the viewer with raw sexual hunger. Everything else stays the exact same!",
+        "Close Up Face With Vaginal Spread And Penis Tease": "Extreme close up on her face and upper body but vagina visible in lower frame, she holds the small penis with one hand pressing it against her clitoris while the other hand spreads her vulva, mouth open tongue out licking her lips suggestively. Same exact identical face with all the same exact identical features but with maximum seductive arousal. Everything else stays the same!",
+        "Couch Lap Dance Penetration": "On the couch, she straddles facing the camera in lap position with small penis fully inside her vagina, dress pulled up and down exposing breasts and vagina, hands on her own breasts squeezing while bouncing slightly implied. Same exact identical face with all the same exact identical features, mouth open in surprised pleasure O shape looking slightly up at camera. Everything else the exact same!",
+        "Intense Missionary Leg Lift": "No clothes, lying on her back on the girly bed with both legs pulled up high and spread extremely wide, small penis buried to the hilt inside her vagina from below with the unseen man's legs stretched underneath. Her hands grip her own thighs pulling them apart even more so the stretched vulva and deep penetration are perfectly visible. Same exact identical face with all the same exact identical features showing pure overwhelming ecstasy, eyes half-closed in bliss, mouth wide open in a perfect moaning O shape. Everything else stays the exact same!",
+        "Kitchen Counter Penetration": "Bent over the kitchen counter, legs spread wide, small penis deep inside her vagina from behind, dress pulled up, breasts hanging and pressed against the counter, one hand reaching back spreading herself. Same exact identical face with all the same exact identical features turned back with an expression of being fucked senseless in ecstasy. Everything else the exact same!",
+        "Kneeling Frontal Invitation With Fingers": "Fully naked, kneeling on the floor close to camera with legs spread, using both index fingers to hook and pull her vagina lips apart extremely wide showing the deepest insides while a small penis tip presses against the entrance from below. Same exact identical face with all the same exact identical features smiling extremely sexually suggestively with pure invitation in her eyes. Everything else stays the same!",
+        "Lotus Position Deep Intimate": "Fully naked in lotus position on the bed facing the camera, small penis completely inside her vagina, legs wrapped around the unseen man but spread enough for full view, her hands on his shoulders (unseen) while she grinds. Same exact identical face with all the same exact identical features showing intense loving pleasure, mouth open, eyes dreamy. Everything else the exact same!",
+        "Mirror Reflection Tease": "Standing in front of a large mirror, bent slightly forward, small penis entering her vagina from behind while she watches herself in the mirror, one hand spreading her vulva, the other pinching a nipple. Same exact identical face with all the same exact identical features reflected in the mirror staring back at the viewer with maximum seductive arousal. Everything else stays the exact same!",
+        "Overhead Squat Ride Ecstasy": "From an overhead camera angle, she squats deeply onto the small penis fully inside her vagina, vulva stretched wide and parted, her hands reaching down to rub her clitoris around the shaft. Same exact identical face with all the same exact identical features turned upwards to the camera with an expression of being lost in intense sexual fantasy and love. Everything else the exact same!",
+        "Prone Bone Close Up": "Lying flat on her stomach on the bed, ass slightly raised, small penis deep inside her vagina from behind, one hand reaching back to spread her ass and vulva so the stretched hole and penetration are clearly visible. Same exact identical face with all the same exact identical features turned to the side looking back at the camera with blissful orgasm face. Everything else the exact same!",
+        "Reverse Cowgirl Deep Squat": "Fully naked, squatting with her back to the camera but head turned almost 180 degrees naturally to stare straight into the viewer's eyes, small penis completely swallowed by her vagina, vulva lips gripping the base tightly. One hand reaches back spreading her ass cheek while the other rubs her clitoris around the shaft. Same exact identical face with all the same exact identical features lost in maximum sexual pleasure, tongue slightly out. Everything else the exact same!",
+        "Shower Wet Sex": "Standing in the shower under running water, one leg wrapped around the unseen man, small penis deep inside her vagina, water cascading over her body, one hand spreading her vulva around the shaft. Same exact identical face with all the same exact identical features showing wet, slippery, maximum sexual ecstasy. Everything else stays the exact same!",
+        "Sideways Spooning Vaginal Sex": "She lies on her side in the same room, one leg lifted high allowing full view of her vagina being penetrated by the small penis coming from the side edge of the photo attached to unseen man, her top hand spreading her vulva further while bottom hand grips the penis base. Same exact identical face with all the same exact identical features, mouth in perfect O shape staring invitingly at camera. Everything else the exact same!",
+        "Standing Bent Over Window Sex": "She bends forward pressing her hands against the window, ass pushed out, small penis thrusting deep into her vagina from behind, legs spread wide so her dripping vagina is fully visible between her thighs. Clothing bunched at waist exposing breasts and vagina. Same exact identical face with all the same exact identical features turned back to the camera with desperate arousal and open moaning mouth. Everything else stays the exact same!",
+        "Standing Carry Position Tease": "She is held up by unseen man (his arms and legs partially visible), legs wrapped around but spread to show vagina penetrated by small penis standing, her hands around his neck but since unseen focus on her, vagina fully visible stretched. Same exact identical face with all the same exact identical features smiling invitingly with tongue between teeth. Everything else the exact same!",
+        "Wall Leaning Deep Penetration Tease": "She leans back against the wall with her legs spread wide and one knee raised high, the small penis from the unseen man below is thrusting deep into her vagina causing visible stretching and her juices flowing freely. Same exact identical face with all the same exact identical features looking straight at the camera with eyes full of desperate arousal and lips parted in a silent scream of pleasure. Everything else the exact same!",
+        "Wall Pressed Standing Sex": "Pressed face-first against the wall, ass pushed out, small penis buried deep in her vagina, one leg lifted high to the side for maximum visibility of the penetration and her dripping vulva. Same exact identical face with all the same exact identical features pressed against the wall but turned enough to lock eyes with the viewer in pure lust. Everything else stays the exact same!",
+        "Yoga Mat Deep Stretch Sex": "On a yoga mat in downward dog position but modified, small penis penetrating her vagina deeply from behind, one leg lifted high to the side for extreme spread and visibility of penetration. Same exact identical face with all the same exact identical features looking back between her legs at the camera in overwhelming pleasure. Everything else stays the exact same!"
+    }
+    
     # Dropdown handler
     def update_prompt_from_dropdown(choice):
         if choice:
             return prompts_dict.get(choice, "")
+        return ""
+    
+    # More prompts dropdown handler
+    def update_prompt_from_dropdown2(choice):
+        if choice:
+            return more_prompts_dict.get(choice, "")
         return ""
     
     preset_dropdown.change(
@@ -516,9 +586,16 @@ with gr.Blocks(css=css) as demo:
         outputs=[prompt],
         scroll_to_output=False
     )
+    
+    preset_dropdown2.change(
+        fn=update_prompt_from_dropdown2,
+        inputs=[preset_dropdown2],
+        outputs=[prompt],
+        scroll_to_output=False
+    )
 
     gr.on(
-        triggers=[run_button.click, run_button_top.click, prompt.submit],
+        triggers=[run_button.click, run_button_top.click, run_button_top2.click, prompt.submit],
         fn=infer,
         inputs=[
             input_images,
