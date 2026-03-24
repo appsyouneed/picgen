@@ -1,0 +1,16 @@
+D:\image-editor>python app.py
+WARNING:torchao.kernel.intmm:Warning: Detected no triton, on systems without Triton certain kernels will not work
+loading base pipeline architecture...
+Loading from local path: D:\image-editor\models\Qwen-Image-Edit-2511
+Traceback (most recent call last):
+  File "D:\image-editor\app.py", line 128, in <module>
+    pipe = QwenImageEditPlusPipeline.from_pretrained(
+  File "C:\Users\human\AppData\Local\Programs\Python\Python310\lib\site-packages\huggingface_hub\utils\_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "C:\Users\human\AppData\Local\Programs\Python\Python310\lib\site-packages\diffusers\pipelines\pipeline_utils.py", line 896, in from_pretrained
+    config_dict = cls.load_config(cached_folder, dduf_entries=dduf_entries)
+  File "C:\Users\human\AppData\Local\Programs\Python\Python310\lib\site-packages\huggingface_hub\utils\_validators.py", line 89, in _inner_fn
+    return fn(*args, **kwargs)
+  File "C:\Users\human\AppData\Local\Programs\Python\Python310\lib\site-packages\diffusers\configuration_utils.py", line 418, in load_config
+    raise EnvironmentError(
+OSError: Error no file named model_index.json found in directory D:\image-editor\models\Qwen-Image-Edit-2511.
