@@ -18,7 +18,7 @@ echo "============================================="
 # -----------------------------------------------------------
 echo ""
 echo "[1/8] Updating system and installing core dependencies..."
-sudo apt update && sudo apt install -y python3-pip git-lfs python3.12-venv
+apt update && apt install -y python3-pip git-lfs python3.12-venv
 
 # -----------------------------------------------------------
 # STEP 2: Install core AI libraries globally
@@ -53,7 +53,7 @@ HF_BIN="/root/.local/bin/hf"
 # -----------------------------------------------------------
 echo ""
 echo "[5/8] Creating local model directories..."
-sudo mkdir -p /models && sudo chmod 777 /models
+mkdir -p /models && chmod 777 /models
 mkdir -p /models/Qwen-Image-Edit-2511
 mkdir -p /models/rapid-aio/v23
 mkdir -p /models/Qwen2.5-VL-7B-Instruct
