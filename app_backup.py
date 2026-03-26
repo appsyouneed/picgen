@@ -923,34 +923,32 @@ with gr.Blocks(css=css) as demo:
         outputs=None,
         js="""
         (disable) => {
-            setTimeout(() => {
-                const style = document.getElementById('keyboard-style') || document.createElement('style');
-                style.id = 'keyboard-style';
-                if (disable) {
-                    style.textContent = `
-                        input[type="text"]:not([role="combobox"]), 
-                        input[type="number"], 
-                        textarea:not([role="combobox"]) { 
-                            -webkit-user-select: none !important;
-                            user-select: none !important;
-                            pointer-events: none !important;
-                        }
-                    `;
-                    document.querySelectorAll('input[type="text"]:not([role="combobox"]), input[type="number"], textarea:not([role="combobox"])').forEach(el => {
-                        el.setAttribute('readonly', 'readonly');
-                        el.setAttribute('inputmode', 'none');
-                    });
-                } else {
-                    style.textContent = '';
-                    document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el => {
-                        el.removeAttribute('readonly');
-                        el.removeAttribute('inputmode');
-                    });
-                }
-                if (!document.getElementById('keyboard-style')) {
-                    document.head.appendChild(style);
-                }
-            }, 100);
+            const style = document.getElementById('keyboard-style') || document.createElement('style');
+            style.id = 'keyboard-style';
+            if (disable) {
+                style.textContent = `
+                    input[type="text"]:not([role="combobox"]), 
+                    input[type="number"], 
+                    textarea:not([role="combobox"]) { 
+                        -webkit-user-select: none !important;
+                        user-select: none !important;
+                        pointer-events: none !important;
+                    }
+                `;
+                document.querySelectorAll('input[type="text"]:not([role="combobox"]), input[type="number"], textarea:not([role="combobox"])').forEach(el => {
+                    el.setAttribute('readonly', 'readonly');
+                    el.setAttribute('inputmode', 'none');
+                });
+            } else {
+                style.textContent = '';
+                document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(el => {
+                    el.removeAttribute('readonly');
+                    el.removeAttribute('inputmode');
+                });
+            }
+            if (!document.getElementById('keyboard-style')) {
+                document.head.appendChild(style);
+            }
             return disable;
         }
         """

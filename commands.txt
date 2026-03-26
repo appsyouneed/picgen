@@ -1,0 +1,30 @@
+# Image Editor Service Commands
+
+## Setup (run once)
+sudo cp image-editor.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable image-editor
+
+## Start the service
+sudo systemctl start image-editor
+
+## Stop the service
+sudo systemctl stop image-editor
+
+## Restart the service
+sudo systemctl restart image-editor
+
+## Check status
+sudo systemctl status image-editor
+
+## View logs (live)
+sudo journalctl -u image-editor -f
+
+## View logs (last 100 lines)
+sudo journalctl -u image-editor -n 100
+
+## Disable service (prevent auto-start on boot)
+sudo systemctl disable image-editor
+
+## Kill the process manually (if needed)
+sudo pkill -f "python3.*app.py"

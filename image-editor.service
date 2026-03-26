@@ -1,0 +1,14 @@
+[Unit]
+Description=Image Editor Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/image-editor
+ExecStart=/usr/bin/python3 /root/image-editor/app.py --share
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
