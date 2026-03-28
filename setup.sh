@@ -25,7 +25,7 @@ apt update && apt install -y python3-pip git-lfs python3.12-venv
 # -----------------------------------------------------------
 echo ""
 echo "[2/8] Installing core AI libraries..."
-pip install gradio diffusers transformers accelerate safetensors \
+python3 -m pip install gradio diffusers transformers accelerate safetensors \
     --break-system-packages --ignore-installed
 
 # -----------------------------------------------------------
@@ -34,7 +34,7 @@ pip install gradio diffusers transformers accelerate safetensors \
 echo ""
 echo "[3/8] Installing app Python dependencies..."
 if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt --break-system-packages
+    python3 -m pip install -r requirements.txt --break-system-packages
 else
     echo "  WARNING: requirements.txt not found in current directory, skipping."
 fi
