@@ -603,28 +603,23 @@ with gr.Blocks(css=css) as demo:
             run_button_top4 = gr.Button("Edit!", variant="primary", size="sm")
 
         with gr.Accordion("Advanced Settings", open=False):
-            # Negative prompt UI element is removed here
-
             seed = gr.Slider(
                 label="Seed",
                 minimum=0,
                 maximum=MAX_SEED,
                 step=1,
                 value=0,
-                visible=False,
             )
 
-            randomize_seed = gr.Checkbox(label="Randomize seed", value=True, visible=False)
+            randomize_seed = gr.Checkbox(label="Randomize seed", value=True)
 
             with gr.Row():
-
                 true_guidance_scale = gr.Slider(
                     label="True guidance scale",
                     minimum=1.0,
                     maximum=10.0,
                     step=0.1,
                     value=1.0,
-                    visible=False,
                 )
 
                 num_inference_steps = gr.Slider(
