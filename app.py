@@ -556,6 +556,58 @@ with gr.Blocks(css=css) as demo:
             )
             run_button_top3 = gr.Button("Edit!", variant="primary", size="sm")
         
+        with gr.Row(elem_id="preset-row"):
+            preset_dropdown4 = gr.Dropdown(
+                label="Group Prompts (1 Man + 2-3 Women)",
+                choices=[
+                    "Merge Together 1",
+                    "Merge Together 2",
+                    "Naked Together",
+                    "Near Dick 1",
+                    "Near Dick 2",
+                    "Near Dick 3",
+                    "Near Dick 4",
+                    "Near Dick 5",
+                    "Shh Holding Dick",
+                    "Both Near Dick",
+                    "Both Holding Dick 1",
+                    "Both Holding Dick 2",
+                    "Single BJ",
+                    "Single Anal",
+                    "Left 1 BJ",
+                    "Left 1 Anal",
+                    "Left 1 Vag On Knee",
+                    "Fucked after 1",
+                    "Fucked after 2",
+                    "Penetration 1",
+                    "Penetration 2",
+                    "Penetration 3",
+                    "Shower Sex Together",
+                    "Kissing Handjob",
+                    "BJ",
+                    "BJ 2",
+                    "Bed BJ 1",
+                    "Bed BJ 2",
+                    "Bed Sex 1",
+                    "Bed Sex2",
+                    "Bed Sex 3",
+                    "Bed Sex 4",
+                    "Side Fuck",
+                    "Kissing Sex"
+                ],
+                value=None,
+                interactive=True,
+                show_label=False,
+                allow_custom_value=False
+            )
+            run_button_top4 = gr.Button("Edit!", variant="primary", size="sm")
+        
+        with gr.Row():
+            start1_btn = gr.Button("Start 1", size="sm")
+            start2_btn = gr.Button("Start 2", size="sm")
+            start3_btn = gr.Button("Start 3", size="sm")
+            start4_btn = gr.Button("Start 4", size="sm")
+        
         with gr.Row():
             with gr.Column():
                 input_images = gr.Gallery(label="Input Images", 
@@ -593,34 +645,6 @@ with gr.Blocks(css=css) as demo:
             lines=2,
             max_lines=5,
         )
-        
-        with gr.Row():
-            start1_btn = gr.Button("Start 1", size="sm")
-            start2_btn = gr.Button("Start 2", size="sm")
-            start3_btn = gr.Button("Start 3", size="sm")
-            start4_btn = gr.Button("Start 4", size="sm")
-        
-        with gr.Row(elem_id="preset-row"):
-            preset_dropdown4 = gr.Dropdown(
-                label="Group Prompts (1 Man + 2-3 Women)",
-                choices=[
-                    "Double Oral Pleasure",
-                    "Triple Threat Oral",
-                    "Dual Penetration Bliss",
-                    "Sandwich Position",
-                    "Double Ride Front and Back",
-                    "Oral While Penetrating",
-                    "Two Mouths One Vagina",
-                    "Stacked Penetration",
-                    "Side by Side Service",
-                    "Triple Connection"
-                ],
-                value=None,
-                interactive=True,
-                show_label=True,
-                allow_custom_value=False
-            )
-            run_button_top4 = gr.Button("Edit!", variant="primary", size="sm")
 
         with gr.Accordion("Advanced Settings", open=False):
             seed = gr.Slider(
