@@ -12,6 +12,19 @@ echo "  picgen - Full Setup"
 echo "============================================="
 
 # -----------------------------------------------------------
+# STEP -1: Clean up all previous installations and caches
+# -----------------------------------------------------------
+echo ""
+echo "[-1/8] Cleaning up previous installations and caches..."
+rm -rf venv
+rm -rf models
+rm -rf /models
+rm -rf ~/.cache/huggingface
+rm -rf /tmp/*
+rm -rf /var/tmp/*
+echo "  Cleanup complete."
+
+# -----------------------------------------------------------
 # STEP 0: Find fastest PyPI mirror
 # -----------------------------------------------------------
 echo ""
@@ -115,7 +128,11 @@ if [ -f "models/Qwen-Image-Edit-2511/model.safetensors" ] || [ -f "models/Qwen-I
 else
     echo "  -> Downloading Base Model..."
     $HF_BIN download Qwen/Qwen-Image-Edit-2511 \
-        --local-dir models/Qwen-Image-Edit-2511
+        --local-dir models/Qwen-Image-Edit-2511 \
+        --resume-download || {
+        echo "ERROR: Download failed. Check disk space and network."
+        exit 1
+    }
 fi
 
 if [ -f "models/rapid-aio/v23/Qwen-Rapid-AIO-NSFW-v23.safetensors" ]; then
@@ -124,7 +141,11 @@ else
     echo "  -> Downloading NSFW Weights (v23)..."
     $HF_BIN download Phr00t/Qwen-Image-Edit-Rapid-AIO \
         --include "v23/Qwen-Rapid-AIO-NSFW-v23.safetensors" \
-        --local-dir models/rapid-aio
+        --local-dir models/rapid-aio \
+        --resume-download || {
+        echo "ERROR: Download failed. Check disk space and network."
+        exit 1
+    }
 fi
 
 
