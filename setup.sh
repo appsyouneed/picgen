@@ -123,13 +123,12 @@ mkdir -p models/rapid-aio/v23
 echo ""
 echo "[6/8] Downloading models (this may take a while)..."
 
-if [ -f "models/Qwen-Image-Edit-2511/model.safetensors" ] || [ -f "models/Qwen-Image-Edit-2511/pytorch_model.bin" ]; then
+if [ -f "models/Qwen-Image-Edit-2511/model_index.json" ]; then
     echo "  -> Base Model already downloaded, skipping."
 else
     echo "  -> Downloading Base Model..."
     $HF_BIN download Qwen/Qwen-Image-Edit-2511 \
-        --local-dir models/Qwen-Image-Edit-2511 \
-        --resume-download || {
+        --local-dir models/Qwen-Image-Edit-2511 || {
         echo "ERROR: Download failed. Check disk space and network."
         exit 1
     }
@@ -141,8 +140,7 @@ else
     echo "  -> Downloading NSFW Weights (v23)..."
     $HF_BIN download Phr00t/Qwen-Image-Edit-Rapid-AIO \
         --include "v23/Qwen-Rapid-AIO-NSFW-v23.safetensors" \
-        --local-dir models/rapid-aio \
-        --resume-download || {
+        --local-dir models/rapid-aio || {
         echo "ERROR: Download failed. Check disk space and network."
         exit 1
     }
