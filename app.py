@@ -31,11 +31,18 @@ import json
 # LOCAL MODEL PATHS — relative to this script for portability
 # Models will auto-download to ./models/ folder on first run
 # ---------------------------------------------------------------------------
+import platform
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(SCRIPT_DIR, "models")
 
 BASE_MODEL_LOCAL_PATH = os.path.join(MODELS_DIR, "Qwen-Image-Edit-2511")
 NSFW_WEIGHTS_LOCAL_PATH = os.path.join(MODELS_DIR, "rapid-aio", "v23", "Qwen-Rapid-AIO-NSFW-v23.safetensors")
+
+# Detect operating system
+IS_WINDOWS = platform.system() == "Windows"
+IS_LINUX = platform.system() == "Linux"
+print(f"Operating System: {platform.system()}")
 
 
 def encode_image(pil_image):
@@ -43,6 +50,18 @@ def encode_image(pil_image):
     buffered = io.BytesIO()
     pil_image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+# --- Clear GPU memory from previous runs ---
+def clear_vram():
+    gc.collect()
+    torch.cuda.empty_cache()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+print("Clearing GPU memory from previous runs...")
+clear_vram()
+if torch.cuda.is_available():
+    torch.cuda.reset_peak_memory_stats()
 
 # --- Model Loading ---
 dtype = torch.bfloat16
@@ -72,42 +91,65 @@ scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
 # Load the model pipeline
 from safetensors.torch import load_file
 import torch.nn.functional as F
+from torchao.quantization import quantize_, Int8WeightOnlyConfig, Float8DynamicActivationFloat8WeightConfig
 
 
 # ---------------------------------------------------------------------------
-# CHANGE 2 of 4: BASE PIPELINE — auto-download to local models folder
+# INTELLIGENT MEMORY MANAGEMENT - Works on any GPU
 # ---------------------------------------------------------------------------
 def setup_intelligent_memory_pipeline(pipe):
     """Intelligent memory management based on actual VRAM availability"""
     if not torch.cuda.is_available():
         print("No GPU detected - using CPU only")
-        return pipe.to("cpu")
+        return pipe
     
-    torch.cuda.empty_cache()
+    clear_vram()
     total_vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
     
     print(f"GPU: {torch.cuda.get_device_name(0)}")
-    print(f"Total VRAM: {total_vram:.1f}GB, Model size: ~55GB")
+    print(f"Total VRAM: {total_vram:.1f}GB")
+    print(f"Base model size: ~55GB unquantized, ~20GB with quantization")
     
-    # Model is ~55GB, so we need intelligent thresholds
-    if total_vram >= 80:  # Blackwell B200, H100, etc
-        print("Enterprise GPU: Loading fully on GPU")
-        return pipe.to("cuda")
-    elif total_vram >= 60:  # Some high-end cards
-        print("High-end GPU: Loading fully on GPU with memory optimization")
-        torch.cuda.set_per_process_memory_fraction(0.95)
-        return pipe.to("cuda")
-    elif total_vram >= 20:  # RTX 4090, A6000, etc
-        print("Consumer high-end: Using model CPU offloading")
+    # Apply quantization to reduce memory footprint
+    print("Applying quantization on CPU...")
+    if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
+        quantize_(pipe.text_encoder, Int8WeightOnlyConfig())
+    if hasattr(pipe, 'transformer') and pipe.transformer is not None:
+        quantize_(pipe.transformer, Float8DynamicActivationFloat8WeightConfig())
+    
+    # Enable VAE optimizations for all GPUs
+    print("Enabling VAE slicing and tiling...")
+    if hasattr(pipe, 'vae'):
+        pipe.vae.enable_slicing()
+        pipe.vae.enable_tiling()
+    
+    # Memory strategy based on VRAM
+    if total_vram >= 40:
+        print("High VRAM GPU: Loading fully on GPU")
+        print("  - Moving text_encoder...")
+        if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
+            pipe.text_encoder = pipe.text_encoder.to('cuda')
+        clear_vram()
+        
+        print("  - Moving transformer...")
+        if hasattr(pipe, 'transformer') and pipe.transformer is not None:
+            pipe.transformer = pipe.transformer.to('cuda')
+        clear_vram()
+        
+        print("  - Moving VAE...")
+        if hasattr(pipe, 'vae') and pipe.vae is not None:
+            pipe.vae = pipe.vae.to('cuda')
+        clear_vram()
+        
+        return pipe
+    elif total_vram >= 16:
+        print("Mid-range GPU: Using model CPU offloading")
         pipe.enable_model_cpu_offload()
         return pipe
-    elif total_vram >= 10:  # GTX 1080 Ti, RTX 3080, etc
-        print("Mid-range GPU: Using sequential CPU offloading") 
+    else:
+        print("Low VRAM GPU: Using sequential CPU offloading")
         pipe.enable_sequential_cpu_offload()
         return pipe
-    else:
-        print("Low VRAM: CPU-only mode")
-        return pipe.to("cpu")
 
 print("loading base pipeline architecture...")
 
