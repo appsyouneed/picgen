@@ -2,14 +2,11 @@ import gradio as gr
 import numpy as np
 import random
 import torch
-# spaces import REMOVED — ZeroGPU is HuggingFace-only infrastructure, not needed locally
-
 
 import gc
 
 from safetensors.torch import load_file
-# hf_hub_download import REMOVED — replaced with local path constants below
-
+from huggingface_hub import hf_hub_download
 
 from PIL import Image
 from diffusers import FlowMatchEulerDiscreteScheduler, QwenImageEditPlusPipeline, EulerAncestralDiscreteScheduler, FlowMatchEulerDiscreteScheduler
@@ -33,11 +30,12 @@ import json
 # ---------------------------------------------------------------------------
 import platform
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(SCRIPT_DIR, "models")
-
-BASE_MODEL_LOCAL_PATH = os.path.join(MODELS_DIR, "Qwen-Image-Edit-2511")
-NSFW_WEIGHTS_LOCAL_PATH = os.path.join(MODELS_DIR, "rapid-aio", "v23", "Qwen-Rapid-AIO-NSFW-v23.safetensors")
+BASE_MODEL_LOCAL_PATH = os.environ.get(
+    "BASE_MODEL_PATH", "/models/Qwen-Image-Edit-2511"
+)
+NSFW_WEIGHTS_LOCAL_PATH = os.environ.get(
+    "NSFW_WEIGHTS_PATH", "/models/rapid-aio/v23/Qwen-Rapid-AIO-NSFW-v23.safetensors"
+)
 
 # Detect operating system
 IS_WINDOWS = platform.system() == "Windows"
@@ -54,14 +52,11 @@ def encode_image(pil_image):
 # --- Clear GPU memory from previous runs ---
 def clear_vram():
     gc.collect()
-    torch.cuda.empty_cache()
     if torch.cuda.is_available():
+        torch.cuda.empty_cache()
         torch.cuda.synchronize()
 
-print("Clearing GPU memory from previous runs...")
 clear_vram()
-if torch.cuda.is_available():
-    torch.cuda.reset_peak_memory_stats()
 
 # --- Model Loading ---
 dtype = torch.bfloat16
@@ -91,89 +86,13 @@ scheduler = FlowMatchEulerDiscreteScheduler.from_config(scheduler_config)
 # Load the model pipeline
 from safetensors.torch import load_file
 import torch.nn.functional as F
-from torchao.quantization import quantize_, Int8WeightOnlyConfig, Float8DynamicActivationFloat8WeightConfig
-
-
-# ---------------------------------------------------------------------------
-# INTELLIGENT MEMORY MANAGEMENT - Works on any GPU
-# ---------------------------------------------------------------------------
-def setup_intelligent_memory_pipeline(pipe, apply_quantization=True):
-    """Intelligent memory management based on actual VRAM availability"""
-    if not torch.cuda.is_available():
-        print("No GPU detected - using CPU only")
-        return pipe
-    
-    clear_vram()
-    total_vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-    
-    print(f"GPU: {torch.cuda.get_device_name(0)}")
-    print(f"Total VRAM: {total_vram:.1f}GB")
-    print(f"Base model size: ~55GB unquantized, ~20GB with quantization")
-    
-    # Apply quantization to reduce memory footprint (only if requested)
-    if apply_quantization:
-        print("Applying quantization on CPU...")
-        if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
-            quantize_(pipe.text_encoder, Int8WeightOnlyConfig())
-        if hasattr(pipe, 'transformer') and pipe.transformer is not None:
-            quantize_(pipe.transformer, Float8DynamicActivationFloat8WeightConfig())
-    
-    # Enable VAE optimizations for all GPUs
-    print("Enabling VAE slicing and tiling...")
-    if hasattr(pipe, 'vae'):
-        pipe.vae.enable_slicing()
-        pipe.vae.enable_tiling()
-    
-    # Memory strategy based on VRAM
-    if total_vram >= 40:
-        print("High VRAM GPU: Loading fully on GPU")
-        print("  - Moving text_encoder...")
-        if hasattr(pipe, 'text_encoder') and pipe.text_encoder is not None:
-            pipe.text_encoder = pipe.text_encoder.to('cuda')
-        clear_vram()
-        
-        print("  - Moving transformer...")
-        if hasattr(pipe, 'transformer') and pipe.transformer is not None:
-            pipe.transformer = pipe.transformer.to('cuda')
-        clear_vram()
-        
-        print("  - Moving VAE...")
-        if hasattr(pipe, 'vae') and pipe.vae is not None:
-            pipe.vae = pipe.vae.to('cuda')
-        clear_vram()
-        
-        return pipe
-    elif total_vram >= 16:
-        print("Mid-range GPU: Using model CPU offloading")
-        pipe.enable_model_cpu_offload()
-        return pipe
-    else:
-        print("Low VRAM GPU: Using sequential CPU offloading")
-        pipe.enable_sequential_cpu_offload()
-        return pipe
 
 print("loading base pipeline architecture...")
-
-# Auto-download if not present - check for model_index.json
-model_index_path = os.path.join(BASE_MODEL_LOCAL_PATH, "model_index.json")
-if not os.path.exists(model_index_path):
-    print(f"Base model not found. Downloading to {BASE_MODEL_LOCAL_PATH}...")
-    os.makedirs(MODELS_DIR, exist_ok=True)
-    # Download directly to local path
-    pipe = QwenImageEditPlusPipeline.from_pretrained(
-        "Qwen/Qwen-Image-Edit-2511",
-        torch_dtype=torch.bfloat16,
-        cache_dir=BASE_MODEL_LOCAL_PATH,
-    )
-    # Don't apply memory management yet - need to load NSFW weights first
-else:
-    print(f"Loading from local path: {BASE_MODEL_LOCAL_PATH}")
-    pipe = QwenImageEditPlusPipeline.from_pretrained(
-        BASE_MODEL_LOCAL_PATH,
-        torch_dtype=torch.bfloat16,
-        local_files_only=True,
-    )
-    # Don't apply memory management yet - need to load NSFW weights first
+pipe = QwenImageEditPlusPipeline.from_pretrained(
+    BASE_MODEL_LOCAL_PATH,
+    torch_dtype=torch.bfloat16,
+    local_files_only=True,
+).to("cuda")
 
 # force euler ancestral scheduler
 #pipe.scheduler = EulerAncestralDiscreteScheduler.from_config(pipe.scheduler.config)
@@ -184,22 +103,7 @@ else:
 # CHANGE 3 of 4: NSFW WEIGHTS — auto-download to local models folder
 # ---------------------------------------------------------------------------
 print("accessing v23 checkpoint...")
-
-# Auto-download if not present
-if not os.path.exists(NSFW_WEIGHTS_LOCAL_PATH):
-    print(f"NSFW weights not found. Downloading to {NSFW_WEIGHTS_LOCAL_PATH}...")
-    os.makedirs(os.path.dirname(NSFW_WEIGHTS_LOCAL_PATH), exist_ok=True)
-    from huggingface_hub import hf_hub_download
-    v23_path = hf_hub_download(
-        repo_id="Phr00t/Qwen-Image-Edit-Rapid-AIO",
-        filename="v23/Qwen-Rapid-AIO-NSFW-v23.safetensors",
-        cache_dir=MODELS_DIR,
-        local_dir=os.path.join(MODELS_DIR, "rapid-aio"),
-        local_dir_use_symlinks=False,
-    )
-else:
-    print(f"Loading from local path: {NSFW_WEIGHTS_LOCAL_PATH}")
-    v23_path = NSFW_WEIGHTS_LOCAL_PATH
+v23_path = NSFW_WEIGHTS_LOCAL_PATH
 
 print(f"loading 28GB state dict into cpu memory...")
 state_dict = load_file(v23_path)
@@ -282,10 +186,6 @@ del text_encoder_weights
 gc.collect()
 torch.cuda.empty_cache()
 
-# NOW apply quantization and memory management after weights are loaded
-print("Applying memory optimizations after weight injection...")
-pipe = setup_intelligent_memory_pipeline(pipe, apply_quantization=True)
-
 
 #################################
 
@@ -338,13 +238,6 @@ def add_starter_image(starter_num, current_images):
     return list(current_images) + [img]
 
 # --- Main Inference Function (with hardcoded negative prompt) ---
-# ---------------------------------------------------------------------------
-# CHANGE 4 of 4: @spaces.GPU() decorator REMOVED
-# That decorator allocates a GPU from HuggingFace's shared ZeroGPU pool.
-# On a local VPS the GPU is always available — the decorator is not needed
-# and would crash without the `spaces` library installed.
-# The entire function body below is 100% identical to the original.
-# ---------------------------------------------------------------------------
 def infer(
     images,
     prompt,
@@ -456,7 +349,7 @@ body, .gradio-container {
 }
 """
 
-with gr.Blocks(css=css) as demo:
+with gr.Blocks() as demo:
     with gr.Column(elem_id="col-container"):
         with gr.Row(elem_id="preset-row"):
             preset_dropdown = gr.Dropdown(
@@ -1073,4 +966,4 @@ with gr.Blocks(css=css) as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    demo.launch(server_name="0.0.0.0", server_port=7860, share=False, css=css)

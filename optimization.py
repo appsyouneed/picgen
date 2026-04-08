@@ -3,8 +3,6 @@
 from typing import Any
 from typing import Callable
 from typing import ParamSpec
-from torchao.quantization import quantize_
-from torchao.quantization import Float8DynamicActivationFloat8WeightConfig
 # spaces import REMOVED — spaces.GPU / spaces.aoti_* are HuggingFace ZeroGPU-only APIs.
 # They do not exist outside of HF infrastructure and would crash on a local VPS.
 # Replaced below with standard torch.compile() which gives equivalent or better
