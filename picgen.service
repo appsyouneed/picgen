@@ -5,16 +5,16 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/picgen
+WorkingDirectory=/home/ubuntu/picgen
 Environment="PYTHONUNBUFFERED=1"
 Environment="HF_HOME=/root/.cache/huggingface"
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 Environment="CUDA_LAUNCH_BLOCKING=0"
-ExecStart=/root/picgen/venv/bin/python /root/picgen/app.py
+ExecStart=/home/ubuntu/picgen/venv/bin/python /home/ubuntu/picgen/app.py
 Restart=always
 RestartSec=10
-StandardOutput=append:/root/picgen/picgen.log
-StandardError=append:/root/picgen/picgen.log
+StandardOutput=append:/home/ubuntu/picgen/picgen.log
+StandardError=append:/home/ubuntu/picgen/picgen.log
 
 [Install]
 WantedBy=multi-user.target

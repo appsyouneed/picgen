@@ -3,10 +3,18 @@ set -e
 
 echo "=== Picgen Image Editor VPS Setup ==="
 
+# Detect script directory (works regardless of where it's run from)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Auto sudo if not root
+if [ "$EUID" -ne 0 ]; then
+    exec sudo bash "$0" "$@"
+fi
+
 UBUNTU_VER=$(lsb_release -rs)
 if (( $(echo "$UBUNTU_VER < 24" | bc -l) )); then
     echo "Ubuntu $UBUNTU_VER detected: upgrading pip first..."
-    pip install --upgrade pip
+    pip3 install --upgrade pip
 fi
 
 echo "Installing system dependencies..."
@@ -16,9 +24,9 @@ echo "Creating cache directory..."
 mkdir -p /root/.cache/huggingface
 
 echo "Creating Python virtual environment..."
-rm -rf /root/picgen/venv
-python3 -m venv /root/picgen/venv
-source /root/picgen/venv/bin/activate
+rm -rf "$SCRIPT_DIR/venv"
+python3 -m venv "$SCRIPT_DIR/venv"
+source "$SCRIPT_DIR/venv/bin/activate"
 
 # --- CUDA 12.4 Toolkit (if not already installed) ---
 if ! command -v nvcc &> /dev/null; then
@@ -51,7 +59,7 @@ echo "Installing PyTorch with CUDA 12.4 support..."
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124 --ignore-installed
 
 echo "Installing Python dependencies..."
-pip install -r requirements.txt --ignore-installed
+pip install -r "$SCRIPT_DIR/requirements.txt" --ignore-installed
 
 echo "Installing Hugging Face CLI..."
 pip install "huggingface_hub[cli]>=1.5.0"
@@ -60,15 +68,15 @@ echo "Fixing pyOpenSSL compatibility..."
 python3 -c "from OpenSSL import SSL" 2>/dev/null || pip install --upgrade pyopenssl
 
 echo "Creating local model directories..."
-mkdir -p models/Qwen-Image-Edit-2511
-mkdir -p models/rapid-aio/v23
-chmod -R 777 models
+mkdir -p "$SCRIPT_DIR/models/Qwen-Image-Edit-2511"
+mkdir -p "$SCRIPT_DIR/models/rapid-aio/v23"
+chmod -R 777 "$SCRIPT_DIR/models"
 
 echo "=== Model Download ==="
 echo "Models will be downloaded automatically on first run."
 echo "To pre-download models now, run:"
-echo "  huggingface-cli download Qwen/Qwen-Image-Edit-2511 --local-dir models/Qwen-Image-Edit-2511"
-echo "  huggingface-cli download Phr00t/Qwen-Image-Edit-Rapid-AIO --include 'v23/Qwen-Rapid-AIO-NSFW-v23.safetensors' --local-dir models/rapid-aio"
+echo "  huggingface-cli download Qwen/Qwen-Image-Edit-2511 --local-dir $SCRIPT_DIR/models/Qwen-Image-Edit-2511"
+echo "  huggingface-cli download Phr00t/Qwen-Image-Edit-Rapid-AIO --include 'v23/Qwen-Rapid-AIO-NSFW-v23.safetensors' --local-dir $SCRIPT_DIR/models/rapid-aio"
 
 echo "Verifying GPU accessibility..."
 python3 -c "
@@ -85,7 +93,31 @@ else:
 echo "=== Setup Complete ==="
 echo ""
 echo "Setting up systemd service..."
-cp picgen.service /etc/systemd/system/
+
+# Write service file dynamically with correct paths
+cat > /etc/systemd/system/picgen.service <<EOF
+[Unit]
+Description=Picgen Image Editor Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=$SCRIPT_DIR
+Environment="PYTHONUNBUFFERED=1"
+Environment="HF_HOME=/root/.cache/huggingface"
+Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+Environment="CUDA_LAUNCH_BLOCKING=0"
+ExecStart=$SCRIPT_DIR/venv/bin/python $SCRIPT_DIR/app.py
+Restart=always
+RestartSec=10
+StandardOutput=append:$SCRIPT_DIR/picgen.log
+StandardError=append:$SCRIPT_DIR/picgen.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 systemctl daemon-reload
 systemctl enable picgen
 systemctl start picgen
@@ -98,7 +130,7 @@ echo "  systemctl status picgen  - Check status"
 echo "  systemctl restart picgen - Restart picgen"
 echo ""
 echo "View live output:"
-echo "  tail -f /root/picgen/picgen.log"
+echo "  tail -f $SCRIPT_DIR/picgen.log"
 echo ""
-echo "To run manually: python3 app.py"
+echo "To run manually: python3 $SCRIPT_DIR/app.py"
 echo "The app will be accessible at: http://0.0.0.0:7860"

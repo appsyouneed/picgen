@@ -1,11 +1,17 @@
 #!/bin/bash
 
-sudo cp /root/picgen/picgen.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable picgen.service
-sudo systemctl start picgen.service
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ "$EUID" -ne 0 ]; then
+    exec sudo bash "$0" "$@"
+fi
+
+cp "$SCRIPT_DIR/picgen.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable picgen.service
+systemctl restart picgen.service
 
 echo "✓ picgen service started!"
 echo ""
-echo "Check status: sudo systemctl status picgen"
-echo "View logs: sudo journalctl -u picgen -f"
+echo "Check status: systemctl status picgen"
+echo "View logs: tail -f $SCRIPT_DIR/picgen.log"
