@@ -3,6 +3,12 @@ set -e
 
 echo "=== Picgen Image Editor VPS Setup ==="
 
+UBUNTU_VER=$(lsb_release -rs)
+if (( $(echo "$UBUNTU_VER < 24" | bc -l) )); then
+    echo "Ubuntu $UBUNTU_VER detected: upgrading pip first..."
+    pip3 install --upgrade pip
+fi
+
 echo "Creating cache directory..."
 mkdir -p /root/.cache/huggingface
 
