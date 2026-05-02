@@ -1,0 +1,7 @@
+
+Requirements.txt as background to avoid broken ssh pipe                      
+nohup pip3 install -r requirements.txt --break-system-packages --ignore-installed --timeout=300 --retries=10 > pip-install.log 2>&1 &
+
+
+Then monitor it:
+tail -f pip-install.log

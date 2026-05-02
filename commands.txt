@@ -1,0 +1,30 @@
+# Image Editor Service Commands
+
+## Setup (run once)
+sudo cp picgen.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable picgen
+
+## Start the service
+sudo systemctl start picgen
+
+## Stop the service
+sudo systemctl stop picgen
+
+## Restart the service
+sudo systemctl restart picgen
+
+## Check status
+sudo systemctl status picgen
+
+## View logs (live)
+sudo journalctl -u picgen -f
+
+## View logs (last 100 lines)
+sudo journalctl -u picgen -n 100
+
+## Disable service (prevent auto-start on boot)
+sudo systemctl disable picgen
+
+## Kill the process manually (if needed)
+sudo pkill -f "python3.*app.py"

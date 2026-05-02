@@ -1,0 +1,27 @@
+# Core dependencies - install first
+torch
+torchvision
+torchao==0.11.0
+
+# Diffusers - stable version
+diffusers
+
+# Transformers and model dependencies
+transformers
+accelerate
+safetensors
+sentencepiece
+peft
+
+# Image processing
+Pillow
+numpy
+
+# UI and utilities
+gradio
+huggingface_hub
+tqdm
+typing-extensions
+
+# Additional dependencies
+dashscope
