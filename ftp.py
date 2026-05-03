@@ -3,7 +3,7 @@ import sys
 import os
 
 def pip_install(*pkgs):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q"] + list(pkgs))
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "--break-system-packages"] + list(pkgs))
 
 try:
     from pyftpdlib.authorizers import DummyAuthorizer
