@@ -13,7 +13,7 @@ echo "Creating cache directory..."
 mkdir -p /root/.cache/huggingface
 
 echo "Installing system dependencies..."
-apt-get update && apt-get install -y python3-pip python3-dev ffmpeg wget git git-lfs bc curl
+apt-get install -y python3-pip python3-dev ffmpeg wget git git-lfs bc curl
 
 echo "Installing PyTorch with CUDA 12.8 support..."
 pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128 --ignore-installed --break-system-packages
