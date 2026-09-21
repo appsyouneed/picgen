@@ -1,0 +1,71 @@
+# =============================================================================
+# PicGen — standalone Qwen Image Edit photo app (picgen-only build of newgen)
+# =============================================================================
+# CRITICAL: torch / torchvision / torchaudio are NOT listed here.
+# They are provided by the system Python environment (torch 2.8.0.dev+cu128,
+# CUDA 12.8) and are made available to the app venv via symlinks + a .pth
+# entry at setup time (see setup.sh).  Installing them here would download
+# and overwrite the existing dev builds, breaking CUDA 12.8 compatibility.
+#
+# Everything vidgen-specific from the newgen requirements has been removed:
+# no opencv-python / imageio / imageio-ffmpeg / av (video encode), no
+# sentencepiece / peft (Wan LoRA), no torchcodec / mmpose / rembg extras.
+# =============================================================================
+
+# --- HuggingFace stack -------------------------------------------------------
+# huggingface-hub must stay <1.0 for transformers<5.
+# gradio 4.43.0 imports HfFolder which was removed in huggingface-hub>=0.26.
+# setup.sh patches gradio/oauth.py with a shim after install so this is safe.
+huggingface-hub>=0.34.0,<1.0
+
+# transformers PINNED EXACTLY — do not turn this back into a range.
+# Needs >=4.52.0 for Qwen-Image-Edit-2511's nested text_config format
+# (Qwen2_5_VLConfig.sub_configs lacked "text_config" before 4.52.0, so the
+# nested dict stayed raw and GenerationConfig.from_model_config() crashed
+# calling .to_dict() on it).
+# 4.55.4 is verified working with diffusers 0.37.1 and Qwen-Image-Edit-2511's
+# config format. An open range (">=4.52.0,<5.0") will silently pick up a
+# newer, untested transformers release the next time this venv is rebuilt.
+transformers==4.55.4
+
+# diffusers PINNED EXACTLY to the version verified against
+# transformers==4.55.4 above for the QwenImageEditPlusPipeline.
+diffusers==0.37.1
+
+safetensors>=0.4.0
+
+# gguf: lets diffusers load the Q6_K GGUF transformer via GGUFQuantizationConfig
+# + QwenImageTransformer2DModel.from_single_file. Pure Python, no torch dep.
+gguf
+
+# numpy: allow >=1.26 and <2.2. This is compatible with torch 2.8 dev and
+# avoids constraining the system install. The venv will install its own copy.
+numpy>=1.26,<2.2
+
+# --- Model dependencies ------------------------------------------------------
+accelerate
+# torchao / torchvision / torch / torchaudio: NOT listed here.
+# All are provided by the system Python stack (torch 2.8 dev+cu128) and made
+# available to the venv via symlinks at runtime (see setup.sh).
+
+# --- Image processing --------------------------------------------------------
+Pillow
+
+# --- UI and utilities --------------------------------------------------------
+# gradio 4.43.0: supports js= on event handlers and gr.on(), avoids 4.44.1
+# jinja2 bug.  gradio-client must be pinned to exactly what gradio 4.43.0
+# requires — a newer gradio-client passes bool schemas (from pydantic v2
+# additionalProperties:false) into get_type() which expects a dict, crashing
+# with "argument of type 'bool' is not iterable".
+gradio==4.43.0
+gradio-client==1.3.0
+
+# pydantic>=2.10 renamed is_stdlib_dataclass->is_builtin_dataclass, breaking
+# gradio 4.43.0's component schema generation with ImportError at startup.
+pydantic>=2.0,<2.10
+
+ftfy
+tqdm
+typing-extensions
+requests
+cryptography
